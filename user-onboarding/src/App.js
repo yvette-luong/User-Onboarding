@@ -4,12 +4,21 @@ import "./App.css";
 import * as yup from "yup";
 import axios from "axios";
 import formSchema from "./FormSchema";
+import User from "./User";
 
 const initialFormValues = {
-  name: "",
+  first_name: "",
+  email:"",
+  password:"",
+  //checkbox 
+  termofservices:{
+    true: false, 
+  }
 };
 const initialFormError = {
-  name: "",
+  first_name: "",
+  email:"",
+  password:"",
 };
 const initialUsers = [];
 const initialDisabled = true;
@@ -21,61 +30,96 @@ function App() {
   const [disabled, setDisabled] = useState(initialDisabled);
 
   const getUsers = () => {
-    axios.get(`https://reqres.in/api/users`)
-    .then(res => {
-      setUsers([...users, res.data])
-    })
-    .catch(err => {
-      console.log(err)
-    })
-    .finally(()=>{
-      setFormValues(initialFormValues)
-    })
-  }
+    axios
+      .get(`https://reqres.in/api/users`)
+      .then((res) => {
+        setUsers(res.data.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+      // .finally(() => {
+      //   setFormValues(initialFormValues);
+      // });
+  };
+  const postNewUser = (newUser) => {
+    axios
+      .post(`https://reqres.in/api/users`, newUser)
+      .then((res) => {
+        console.log(res);
+        setUsers([...users, res.data]);     
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+      .finally(()=>{
+        setFormValues(initialFormValues);
+      })
+  };
   const inputChange = (name, value) => {
     yup
       .reach(formSchema, name)
       .validate(value)
-      .then(valid =>{
-        setFormError({...formError, [name]: " "
-        })
+      .then((valid) => {
+        setFormError({ ...formError, [name]: " " });
       })
-      .catch(err => {
+      .catch((err) => {
         setFormError({
-          ...formError, 
-          [name]:err.errors[0]
-        })
-      })
+          ...formError,
+          [name]: err.errors[0],
+        });
+      });
       setFormValues({
-        ...formValues, 
-        [name]: value
+        ...formValues,
+        [name]: value,
+      });
+  };
+  const checkboxChange = (name, isChecked) => {
+      setFormValues({
+        ...formValues,termofservices: {
+          ...formValues.termofservices,
+            [name]: isChecked,
+        } 
       })
-  }
-const checkboxChange = (name, isChecked) => {
+  };
 
-}
-const submit = () => {
-  const newUser = {
-    name: formValues.name.trim(),
-  }
-}
+  const submit = () => {
+    const newUser = {
+      first_name: formValues.first_name.trim(),
+      email: formValues.email.trim(),
+      password: formValues.password.trim(),
+      termofservices: Object.keys(formValues.termofservices).filter(term => formValues[term])
+    };
+    postNewUser(newUser);
+  };
 
-useEffect(()=> {
-  getUsers()
-},[])
+  useEffect(() => {
+    getUsers();
+  }, []);
 
-useEffect(()=>{
-  formSchema.isValid(formValues)
-  .then(valid => {
-    setDisabled(!valid)
-  })
-},[formValues])
+  useEffect(() => {
+    formSchema.isValid(formValues).then((valid) => {
+      setDisabled(!valid);
+    });
+  }, [formValues]);
 
   return (
     <div className="App">
       <header className="App-header">
         <h1>User Boarding App </h1>
-        <Form />
+        <Form
+          values={formValues}
+          inputChange={inputChange}
+          checkboxChange={checkboxChange}
+          submit={submit}
+          disabled={disabled}
+          errors={formError}
+        />
+        {users.map(user => {
+          return (
+            <User key={user.id} details={user}/>
+          )
+        })}
       </header>
     </div>
   );
